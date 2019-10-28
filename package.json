@@ -1,0 +1,44 @@
+{
+  "name": "@mail/apidoc-next",
+  "version": "0.1.0",
+  "description": "apidoc // next",
+  "author": "RubaXa <ibn@rubaxa.org>",
+  "license": "MIT",
+  "repository": "git@github.com:artifact-project/scaffold.git",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest --coverage",
+    "ts-build": "tsc",
+    "git-clean": "git clean -f",
+    "prepublish": "npm run test && npm run ts-build",
+    "postpublish": "npm run git-clean"
+  },
+  "files": [
+    "*.js",
+    "*.d.ts",
+    "src/*/*.js",
+    "src/*/*.d.ts"
+  ],
+  "devDependencies": {
+    "@types/jest": "^24.0.20",
+    "jest": "^24.9.0",
+    "ts-jest": "^24.1.0",
+    "typescript": "^3.6.4"
+  },
+  "jest": {
+    "transform": {
+      "^.+\\.tsx?$": "ts-jest"
+    },
+    "testRegex": "\\.tests\\.ts$",
+    "transformIgnorePatterns": [],
+    "setupFilesAfterEnv": [
+      "<rootDir>/__jest__/extensions.ts"
+    ],
+    "moduleFileExtensions": [
+      "ts",
+      "tsx",
+      "js",
+      "json"
+    ]
+  }
+}
