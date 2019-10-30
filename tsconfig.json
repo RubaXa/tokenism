@@ -1,16 +1,11 @@
 {
   "compilerOptions": {
     "module": "commonjs",
-    "target": "es5",
+    "target": "es2020",
     "declaration": true,
     "moduleResolution": "node",
     "experimentalDecorators": true,
-    "lib": [
-      "dom",
-      "es5",
-      "es2015.promise",
-      "es2016.array.include"
-    ]
+    "removeComments": false
   },
   "exclude": [
     "dist",

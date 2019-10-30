@@ -1,1 +1,1 @@
-export * from './src/token/_token';
+export * from './src/token';

@@ -4,7 +4,7 @@
   "description": "apidoc // next",
   "author": "RubaXa <ibn@rubaxa.org>",
   "license": "MIT",
-  "repository": "git@github.com:artifact-project/scaffold.git",
+  "repository": "",
   "main": "index.js",
   "scripts": {
     "test": "jest --coverage",
@@ -20,7 +20,7 @@
     "src/*/*.d.ts"
   ],
   "devDependencies": {
-    "@types/jest": "^24.0.20",
+    "@types/jest": "^24.0.21",
     "jest": "^24.9.0",
     "ts-jest": "^24.1.0",
     "typescript": "^3.6.4"
