@@ -1,277 +1,244 @@
-type TokenComment = string;
-type TokenValue = string | number | boolean | object;
-type TokenValueFactory = ((...args: any) => TokenValue) | TokenValue;
+type TokenValuePrimitive = string | boolean | number;
+type TokenValue = string | boolean | number | TokenValuePrimitive[];
+type TokenValueGen = (...args: any[]) => TokenValue;
 
-type TokenType<T extends TokenValueFactory> = T extends () => infer R ? R : T;
-type TokenValueNorm<T extends TokenValueFactory> = T extends (...args: infer A) => infer R
-	? R | ((...args: A) => R)
-	: T
+type LikeToken = (comment?: string, value?: any) => LikeToken;
+type TokeValueCompositeFactory = (() => LikeToken[]) & {composite: boolean};
+
+type TokenValueFactory =
+	| TokenValue
+	| TokenValueGen
 ;
 
-type TokenTuple = readonly [
-	TokenComment,
-	TokenValueFactory,
-]
-
-type TokenCompositeTuple = readonly [
-	TokenComment,
-	TokenTupleMap,
-]
-
-type TokenTupleMap = {
-	[name:string]: TokenTuple | TokenCompositeTuple;
-}
-
-type TokenDict<T extends TokenTupleMap> = {
-	[K in keyof T]: (T[K] extends TokenCompositeTuple
-		? Token<T[K][0], TokenCompositeArgs<T[K][1]>> & {part: TokenDict<T[K][1]>}
-		: Token<T[K][0], T[K][1]>
-	);
-}
-
-type TokenCompositeArgs<T extends TokenTupleMap> = {
-	[K in keyof T]?: (
-		T[K][1] extends TokenTupleMap
-			? TokenCompositeArgs<T[K][1]>
-			: TokenValueNorm<T[K][1]>
-	)
-}
-
-type TokenValueResult<T> = (
-	T extends () => infer R ? R :
-	T extends TokenTuple ? TokenType<T[1]> :
-	T extends {[key:string]: TokenValueFactory} ? {
-		[K in keyof T]: TokenValueResult<T[K]>;
-	} :
-	never
-)
-
-export function createDict<
-	TM extends TokenTupleMap,
->(tuples: TM): TokenDict<TM> {
-	return Object.entries(tuples).reduce((dict, [key, tuple]) => {
-		if (isTokenTupleMap(tuple[1])) {
-			const nested = createDict(tuple[1]);
-			const token = createToken(key, [tuple[0], createTokenCompositeValue(tuple[1])]);
-
-			Object.defineProperty(token, 'part', {
-				enumerable: false,
-				value: nested,
-			});
-
-			dict[key] = token;
-		} else {
-			dict[key] = createToken(key, tuple);
-		}
-		return dict;
-	}, {}) as TokenDict<TM>;
-}
-
-type TokenFactory <
-	DC extends TokenComment,
+type TokenValueInfer<T extends TokenValueFactory> = T extends () => infer R ? R : T;
+type TokenValueTypedFactory<
 	V extends TokenValueFactory,
-> = <C extends TokenComment | null>(comment?: string, value?: TokenValueNorm<V>) => Token<
-	C extends null ? DC : C,
-	V
->;
+	T = TokenValueInfer<V>,
+> = T | ((...args: any[]) => T);
+
+type TokenJSON<
+	K extends string,
+	C extends string,
+	V extends TokenValueFactory,
+> = {
+	key: K;
+	param: string;
+	optional: boolean;
+	comment: C;
+	value: TokenValueInfer<V>;
+	type: string;
+}
+
+type TokenFactory<
+	K extends string,
+	C extends string,
+	V extends TokenValueFactory,
+> = <
+	NC extends string = C,
+	NV extends TokenValueFactory = V,
+>(comment?: NC, value?: NV) => Token<K, NC, NV>;
 
 type Token<
-	C extends TokenComment,
+	K extends string,
+	C extends string,
 	V extends TokenValueFactory,
-> = TokenFactory<C, V> & {
-	as: (key: string, comment?: string, value?: V) => Token<C, V>;
-	tuple: () => readonly [C, V];
-	key: () => string;
-	param: () => string;
+> = TokenFactory<K, C, V> & {
+	as: <
+		P extends string,
+		NC extends string = C,
+		NV extends TokenValueFactory = V,
+	>(param: P, comment?: string, value?: TokenValueTypedFactory<V>) => Token<P, NC, NV>;
+
+	optional: <
+		NC extends string = C,
+		NV extends TokenValueFactory = V,
+	>(comment?: string, value?: TokenValueTypedFactory<V>) => Token<K, NC, NV>;
+
+	key: () => K;
 	comment: () => C;
-	value: () => TokenValueResult<V>;
-	lastValue: () => TokenValueResult<V> | undefined;
-	optional: (comment?: string, value?: V) => Token<C, V>;
-	isOptional: () => boolean;
-	toAPIDOCJSON: () => object;
+	value: () => TokenValueInfer<V>;
+	lastValue: () => TokenValueInfer<V>;
+	param: () => string;
+	toJSON: () => TokenJSON<K, C, V>;
+};
+
+type TokenExtra<
+	C extends string,
+	V extends TokenValueFactory,
+> = {
+	composite?: boolean;
+	optional?: boolean;
+	param?: string;
+	comment?: C;
+	value?: V;
+}
+
+type CastToTokenValueFactory<
+	F extends TokenValueFactory | TokeValueCompositeFactory,
+> = (
+	F extends TokeValueCompositeFactory
+		? () => 'composite'
+		: F
+);
+
+export function composeTokens<T extends LikeToken[]>(...tokens: T): TokeValueCompositeFactory {
+	return defineProperties(() => tokens, {
+		composite: true,
+	});
 }
 
 export function createToken<
 	K extends string,
-	T extends TokenTuple,
+	C extends string,
+	F extends TokenValueFactory | TokeValueCompositeFactory,
+	V extends TokenValueFactory = CastToTokenValueFactory<F>,
 >(
 	key: K,
-	tuple: T,
-	extra: {
-		comment?: TokenComment;
-		value?: TokenValueFactory;
-		optional?: boolean;
-	} = {},
-) {
-	function token(comment: TokenComment, value?: T[1]) {
-		if (arguments.length > 0) {
-			return createToken(key, tuple, {
-				...extra,
-				comment,
-				value,
-			});
-		}
+	comment: C,
+	value: F,
+): Token<K, C, V> {
+	const extra = Object(this) as TokenExtra<C, V>;
+	const getExtra = (other: TokenExtra<C, V> = {}) => ({
+		comment,
+		value,
+		...extra,
+		...other,
+	});
 
-		return token;
+	function token(nextComment?: string, nextValue?: V) {
+		return createToken.call(getExtra(), key, nextComment, nextValue);
 	}
 
-	let lastValue = undefined;
-	let optional = !!extra.optional;
+	let lastValue: TokenValueInfer<V>;
 
-	const paramName = snakeCase(key);
-	const comment = () => extra.comment != null ? extra.comment : tuple[0];
-
-	const value = (comments?: boolean) => {
-		if (extra.value != null) {
-			lastValue = evalValue(extra.value, tuple[1], comments);
-		} else {
-			lastValue = evalValue(null, tuple[1], comments);
-		}
+	const optional = !!extra.optional;
+	const getKey = () => key;
+	const getParam = () => snakeCase(extra.param || key);
+	const getComment = () => comment || extra.comment;
+	const getValue = (mode: 'value' | 'raw') => {
+		lastValue = compute(value as any, extra.value, mode);
 		return lastValue;
 	};
 
-	Object.defineProperties(token, {
-		as: {
-			enumerable: false,
-			value: (key: string, comment: TokenComment, value?: T[1]) => {
-				return createToken(key, tuple, {comment, value});
-			},
+	return defineProperties(token, {
+		as: (param: string, nextComment?: string, nextValue?: TokenValueFactory) => {
+			return createToken.call(getExtra({param}), key, nextComment, nextValue);
 		},
-
-		tuple: {
-			enumerable: false,
-			value: () => tuple,
+		optional: (nextComment?: string, nextValue?: TokenValueFactory) => {
+			return createToken.call(getExtra({optional: true}), key, nextComment, nextValue);
 		},
+		key: getKey,
+		param: getParam,
+		comment: getComment,
+		value: () => getValue('value'),
+		lastValue: () => lastValue,
+		toJSON: () => {
+			let val = getValue('raw');
 
-		key: {
-			enumerable: false,
-			value: () => key,
+			return {
+				name: getParam(),
+				value: val,
+				optional,
+				comment: getComment(),
+				type: typeOf(val),
+			};
 		},
-
-		param: {
-			enumerable: false,
-			value: () => paramName,
-		},
-
-		comment: {
-			enumerable: false,
-			value: comment,
-		},
-
-		value: {
-			enumerable: false,
-			value: ()=> value(),
-		},
-
-		lastValue: {
-			enumerable: false,
-			value: () => lastValue,
-		},
-
-		optional: {
-			enumerable: false,
-			value: (comment: TokenComment, value?: T[1]) => {
-				return createToken(key, tuple, {comment, value, optional: true});
-			},
-		},
-
-		isOptional: {
-			enumerable: false,
-			value: () => optional,
-		},
-
-		toAPIDOCJSON: {
-			enumerable: false,
-			value: () => {
-				let val = value(true);
-
-				return {
-					[`${paramName}${optional ? '?' : ''}__comment`]: `${comment()}. ${typeOf(val)}`,
-					[`${paramName}${optional ? '?' : ''}`]: val,
-				};
-			},
-		},
-	});
-
-	return token as Token<T[0], T[1]>;
+	}) as any; // todo!!!
 }
 
-function typeOf(val: unknown) {
-	let type = val === null ? 'null' : typeof val;
-	return `${type.charAt(0).toUpperCase()}${type.slice(1)}.`;
+function defineProperties<T extends object, P extends object>(obj: T, props: P): T & P {
+	const map = Object.keys(props).reduce((descr, key) => {
+		descr[key] = {
+			writable: false,
+			configurable: false,
+			value: props[key],
+		};
+
+		return descr;
+	}, {} as PropertyDescriptorMap)
+
+	Object.defineProperties(obj, map);
+
+	return obj as T & P;
 }
 
-function evalValue(value: TokenValueFactory, factory?: TokenValueFactory, comments?: boolean): TokenValue {
-	let val = typeof value === 'function' ? evalValue(value()) : value;
+function snakeCase(key: string) {
+	return key.replace(/[A-Z]/g, (chr) => `_${chr.toLowerCase()}`);
+}
 
-	if (comments && typeof factory === 'function' && factory['withComments']) {
-		factory = factory['withComments'];
+function isTokenValueGen(val: unknown): val is TokenValueGen {
+	return typeof val === 'function';
+}
+
+function compute<
+	V extends TokenValueFactory | TokeValueCompositeFactory,
+	I extends TokenValueFactory | TokeValueCompositeFactory,
+	R extends TokenValueInfer<any>, // todo: -any
+>(
+	value: V,
+	initial?: I,
+	mode?: 'value' | 'raw',
+): R {
+	if (isTokeValueCompositeFactory(value)) {
+		return computeComposite(value, mode) as any; // todo: -any
 	}
 
-	if (typeof factory === 'function') {
-		if (!/^\(\)/.test(factory.toString())) {
-			val = evalValue(val == null ? factory() : factory(val));
+	if (isTokeValueCompositeFactory(initial)) {
+		return;
+	}
+
+	const valueFactory = value as TokenValueFactory;
+	const initialFactory = initial as TokenValueFactory;
+
+	let val = (isTokenValueGen(valueFactory) ? compute(valueFactory()) : valueFactory) as R;
+
+	if (isTokenValueGen(initialFactory)) {
+		if (!/^\(\)/.test(initial.toString())) {
+			val = compute(val == null ? initialFactory() : initialFactory(val));
 		} else if (val == null) {
-			val = evalValue(factory());
+			val = compute(initialFactory());
 		}
 	} else if (val == null) {
-		val = factory;
+		val = initialFactory as any; // todo: -any
 	}
 
 	return val;
 }
 
-function isTokenTupleMap(value: TokenValueFactory | TokenTupleMap): value is TokenTupleMap {
-	return (
-		value !== null &&
-		typeof value === 'object' &&
-		Object.values(value).every(v => Array.isArray(v))
-	);
-}
+function computeComposite(factory: TokeValueCompositeFactory, mode?: 'value' | 'raw') {
+	const tokens = factory();
+	const result = {};
 
-function createTokenCompositeValue(map: TokenTupleMap): any {
-	function compose(map: TokenTupleMap, values?: any, comments?: boolean) {
-		return Object.entries(map).reduce((result, [key, tuple]) => {
-			const factory = tuple[1];
-			const val = values ? values[key] : null;
-			const name = snakeCase(key);
-
-			if (comments) {
-				result[`${name}__comment`] = `${tuple[0]}. `;
-			}
-
-			if (isTokenTupleMap(factory)) {
-				result[name] = compose(factory, val, comments);
-			} else {
-				result[name] = val != null ? evalValue(val, factory) : evalValue(factory);
-			}
-
-			if (comments) {
-				result[`${name}__comment`] += typeOf(result[name]);
-			}
-
-			return result;
-		}, {});
+	for (let token of tokens) {
+		if (isToken(token)) {
+			result[token.param()] = mode === 'raw' ? token.toJSON() : token.value();
+		}
 	}
 
-	const factory = (values?: any) => compose(map, values);
-	factory.withComments = (values?: any) => compose(map, values, true);
-
-	return factory;
+	return result
+	// return tokens.reduce((map, token) => {
+	// 	map[32] = 123;
+	// 	return map;
+	// }, {}) as any;
 }
 
-export function composeTokens<T extends any[]>(...tokens: T): TokenValueFactory {
-	const map = tokens.reduce((map, token: Token<any, any>) => {
-		if (token) {
-			map[token.key()] = [token.comment(), token.value];
-		}
-
-		return map;
-	}, {});
-
-	return createTokenCompositeValue(map);
+function typeOf(val: unknown) {
+	let type = val === null ? 'null' : typeof val;
+	return `${type.charAt(0).toUpperCase()}${type.slice(1)}`;
 }
 
-function snakeCase(key: string) {
-	return key.replace(/[A-Z]/g, (chr) => `_${chr.toLowerCase()}`);
+function isLikeToken(val: unknown): val is LikeToken {
+	return typeof val === 'function' && typeof val['as'] === 'function';
+}
+
+function isToken(val: unknown): val is Token<any, any, any> {
+	return isLikeToken(val);
+}
+
+function isTokeValueCompositeFactory(val: unknown): val is TokeValueCompositeFactory {
+	if (typeof val === 'function') {
+		return !!val['composite'];
+	}
+
+	return false;
 }
