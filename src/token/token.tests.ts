@@ -100,21 +100,23 @@ describe('tokens', () => {
 	});
 
 	describe('composite', () => {
-		const thread = createToken(
-			'thread',
-			'Тред',
+		const msgId = () => '43503050430523';
+		const message = createToken(
+			'message',
+			'Письмо',
 			composeTokens(
-				createToken('id', 'ID Треда', () => '0:123:4'),
-				createToken('flags', 'Флаги Треда', composeTokens(
+				createToken('id', 'ID Письма', msgId),
+				createToken('flags', 'Флаги Письма', composeTokens(
 					createToken('unread', 'Прочитанность', false),
 					createToken('pinned', 'Прикреплённость', true),
 				)),
 			),
 		);
+		// const v = message(null)
 
 		it('value', () => {
-			expect(thread.value()).toEqual({
-				id: '0:123:4',
+			expect(message.value()).toEqual({
+				id: msgId(),
 				flags: {
 					unread: false,
 					pinned: true,
@@ -123,17 +125,43 @@ describe('tokens', () => {
 		});
 
 		it('toJSON', () => {
-			expect(thread.toJSON()).toEqual(raw('thread', 'Тред', 'Object', {
-				id: raw('id', 'ID Треда', 'String', '0:123:4'),
-				flags: raw('flags', 'Флаги Треда', 'Object', {
+			expect(message.toJSON()).toEqual(raw('message', 'Письмо', 'Object', {
+				id: raw('id', 'ID Письма', 'String', msgId()),
+				flags: raw('flags', 'Флаги Письма', 'Object', {
 					unread: raw('unread', 'Прочитанность', 'Boolean', false),
 					pinned: raw('pinned', 'Прикреплённость', 'Boolean', true),
 				}),
 			}));
 		});
+
+		// it('with values', () => {
+		// 	expect(message(null, {}).value()).toEqual({
+		// 		id: '---',
+		// 		flags: {
+		// 			unread: true,
+		// 			pinned: true,
+		// 		},
+		// 	});
+		// });
+
+		// describe('nested', () => {
+		// 	const threadId = () => '0:1234:5';
+		// 	const thread = createToken('thread', 'Тред', composeTokens(
+		// 		createToken('id', 'ID Треда', threadId),
+		// 		createToken('messages', 'Список писем', [
+		// 			message,
+		// 		]),
+		// 	));
+
+		// 	it('value', () => {
+		// 		expect(thread.value()).toEqual({
+		// 			id: threadId(),
+		// 			messages: [{id: msgId(), flags: {unread: false, pinned: true}}],
+		// 		});
+		// 	});
+		// });
 	});
 });
-
 
 function raw(name: string, comment: string, type: string, value: any, optional: boolean = false) {
 	return {

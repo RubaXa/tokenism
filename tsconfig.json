@@ -2,10 +2,11 @@
   "compilerOptions": {
     "module": "commonjs",
     "target": "es2020",
-    "declaration": true,
+    "isolatedModules": true,
     "moduleResolution": "node",
     "experimentalDecorators": true,
-    "removeComments": false
+    "removeComments": false,
+    "strictNullChecks": true
   },
   "exclude": [
     "dist",

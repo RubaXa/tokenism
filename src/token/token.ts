@@ -1,87 +1,17 @@
-type TokenValuePrimitive = string | boolean | number;
-type TokenValue = string | boolean | number | TokenValuePrimitive[];
-type TokenValueGen = (...args: any[]) => TokenValue;
+import {
+	LikeToken,
+	TokenValueCompositeFactory,
+	TokenValueFactory,
+	CastToTokenValueFactory,
+	Token,
+	TokenExtra,
+	TokenValueGen,
+	TokenValueInfer,
+	CompositeToken,
+	CompositeTokenParams,
+} from './token.types';
 
-type LikeToken = (comment?: string, value?: any) => LikeToken;
-type TokeValueCompositeFactory = (() => LikeToken[]) & {composite: boolean};
-
-type TokenValueFactory =
-	| TokenValue
-	| TokenValueGen
-;
-
-type TokenValueInfer<T extends TokenValueFactory> = T extends () => infer R ? R : T;
-type TokenValueTypedFactory<
-	V extends TokenValueFactory,
-	T = TokenValueInfer<V>,
-> = T | ((...args: any[]) => T);
-
-type TokenJSON<
-	K extends string,
-	C extends string,
-	V extends TokenValueFactory,
-> = {
-	key: K;
-	param: string;
-	optional: boolean;
-	comment: C;
-	value: TokenValueInfer<V>;
-	type: string;
-}
-
-type TokenFactory<
-	K extends string,
-	C extends string,
-	V extends TokenValueFactory,
-> = <
-	NC extends string = C,
-	NV extends TokenValueFactory = V,
->(comment?: NC, value?: NV) => Token<K, NC, NV>;
-
-type Token<
-	K extends string,
-	C extends string,
-	V extends TokenValueFactory,
-> = TokenFactory<K, C, V> & {
-	as: <
-		P extends string,
-		NC extends string = C,
-		NV extends TokenValueFactory = V,
-	>(param: P, comment?: string, value?: TokenValueTypedFactory<V>) => Token<P, NC, NV>;
-
-	optional: <
-		NC extends string = C,
-		NV extends TokenValueFactory = V,
-	>(comment?: string, value?: TokenValueTypedFactory<V>) => Token<K, NC, NV>;
-
-	key: () => K;
-	comment: () => C;
-	value: () => TokenValueInfer<V>;
-	lastValue: () => TokenValueInfer<V>;
-	param: () => string;
-	toJSON: () => TokenJSON<K, C, V>;
-};
-
-type TokenExtra<
-	C extends string,
-	V extends TokenValueFactory,
-> = {
-	composite?: boolean;
-	optional?: boolean;
-	param?: string;
-	comment?: C;
-	value?: V;
-}
-
-type CastToTokenValueFactory<
-	F extends TokenValueFactory | TokeValueCompositeFactory,
-> = (
-	F extends TokeValueCompositeFactory
-		? () => 'composite'
-		: F
-);
-
-export function composeTokens<T extends LikeToken[]>(...tokens: T): TokeValueCompositeFactory {
+export function composeTokens<T extends LikeToken[]>(...tokens: T): TokenValueCompositeFactory<T> {
 	return defineProperties(() => tokens, {
 		composite: true,
 	});
@@ -90,32 +20,41 @@ export function composeTokens<T extends LikeToken[]>(...tokens: T): TokeValueCom
 export function createToken<
 	K extends string,
 	C extends string,
-	F extends TokenValueFactory | TokeValueCompositeFactory,
-	V extends TokenValueFactory = CastToTokenValueFactory<F>,
+	V extends TokenValueCompositeFactory<any>,
 >(
 	key: K,
 	comment: C,
-	value: F,
-): Token<K, C, V> {
-	const extra = Object(this) as TokenExtra<C, V>;
-	const getExtra = (other: TokenExtra<C, V> = {}) => ({
+	value: V,
+): CompositeToken<K, C, V>;
+export function createToken<
+	K extends string,
+	C extends string,
+	V extends TokenValueFactory,
+>(
+	key: K,
+	comment: C,
+	value: V,
+): Token<K, C, V>;
+export function createToken(key: string, comment: string, value: any): Function {
+	const extra = Object(this) as TokenExtra<string, any>;
+	const getExtra = (other: TokenExtra<string, any> = {}) => ({
 		comment,
 		value,
 		...extra,
 		...other,
 	});
 
-	function token(nextComment?: string, nextValue?: V) {
+	function token(nextComment?: string, nextValue?: any) {
 		return createToken.call(getExtra(), key, nextComment, nextValue);
 	}
 
-	let lastValue: TokenValueInfer<V>;
+	let lastValue: TokenValueInfer<any>;
 
 	const optional = !!extra.optional;
 	const getKey = () => key;
 	const getParam = () => snakeCase(extra.param || key);
 	const getComment = () => comment || extra.comment;
-	const getValue = (mode: 'value' | 'raw') => {
+	const getValue = (mode?: 'raw') => {
 		lastValue = compute(value as any, extra.value, mode);
 		return lastValue;
 	};
@@ -130,7 +69,7 @@ export function createToken<
 		key: getKey,
 		param: getParam,
 		comment: getComment,
-		value: () => getValue('value'),
+		value: () => getValue(),
 		lastValue: () => lastValue,
 		toJSON: () => {
 			let val = getValue('raw');
@@ -171,20 +110,20 @@ function isTokenValueGen(val: unknown): val is TokenValueGen {
 }
 
 function compute<
-	V extends TokenValueFactory | TokeValueCompositeFactory,
-	I extends TokenValueFactory | TokeValueCompositeFactory,
+	V extends TokenValueFactory | TokenValueCompositeFactory<any>,
+	I extends TokenValueFactory | TokenValueCompositeFactory<any>,
 	R extends TokenValueInfer<any>, // todo: -any
 >(
 	value: V,
 	initial?: I,
-	mode?: 'value' | 'raw',
+	mode?: 'raw',
 ): R {
-	if (isTokeValueCompositeFactory(value)) {
+	if (isTokenValueCompositeFactory(value)) {
 		return computeComposite(value, mode) as any; // todo: -any
 	}
 
-	if (isTokeValueCompositeFactory(initial)) {
-		return;
+	if (isTokenValueCompositeFactory(initial)) {
+		return 'todo' as any as R; // todo
 	}
 
 	const valueFactory = value as TokenValueFactory;
@@ -193,7 +132,7 @@ function compute<
 	let val = (isTokenValueGen(valueFactory) ? compute(valueFactory()) : valueFactory) as R;
 
 	if (isTokenValueGen(initialFactory)) {
-		if (!/^\(\)/.test(initial.toString())) {
+		if (!/^\(\)/.test(initialFactory.toString())) {
 			val = compute(val == null ? initialFactory() : initialFactory(val));
 		} else if (val == null) {
 			val = compute(initialFactory());
@@ -202,10 +141,19 @@ function compute<
 		val = initialFactory as any; // todo: -any
 	}
 
+	if (Array.isArray(val)) {
+		return val.map((v: any) => {
+			if (isToken(v)) {
+				return mode === 'raw' ? v.toJSON() : v.value();
+			}
+			return v;
+		})
+	}
+
 	return val;
 }
 
-function computeComposite(factory: TokeValueCompositeFactory, mode?: 'value' | 'raw') {
+function computeComposite(factory: TokenValueCompositeFactory<any>, mode?: 'raw') {
 	const tokens = factory();
 	const result = {};
 
@@ -215,11 +163,7 @@ function computeComposite(factory: TokeValueCompositeFactory, mode?: 'value' | '
 		}
 	}
 
-	return result
-	// return tokens.reduce((map, token) => {
-	// 	map[32] = 123;
-	// 	return map;
-	// }, {}) as any;
+	return result;
 }
 
 function typeOf(val: unknown) {
@@ -235,7 +179,7 @@ function isToken(val: unknown): val is Token<any, any, any> {
 	return isLikeToken(val);
 }
 
-function isTokeValueCompositeFactory(val: unknown): val is TokeValueCompositeFactory {
+function isTokenValueCompositeFactory(val: unknown): val is TokenValueCompositeFactory<any> {
 	if (typeof val === 'function') {
 		return !!val['composite'];
 	}
