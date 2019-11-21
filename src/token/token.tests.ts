@@ -32,6 +32,14 @@ describe('tokens', () => {
 			expect(tok.toJSON()).toEqual(raw('token', agTokenCaption, 'String', tok.lastValue()));
 		});
 
+		it('as with caption', () => {
+			const caption = 'Any token';
+			const t = agToken.as(null, caption);
+
+			expect(t.name()).toBe(agToken.name());
+			expect(t.caption()).toBe(caption);
+		});
+
 		it('as "regToken"', () => {
 			const reg = agToken.as('regToken', 'Reg-токен');
 

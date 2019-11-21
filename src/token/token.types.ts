@@ -52,10 +52,10 @@ export type Token<
 	V extends TokenValueFactory,
 > = TokenFactory<N, C, V> & {
 	as: <
-		NN extends string,
-		NC extends string = C,
+		NN extends string | null,
+		NC extends string | null,
 		NV extends TokenValueFactory = V,
-	>(name: NN, caption?: string, value?: TokenValueTypedFactory<V>) => Token<NN, NC, NV>;
+	>(name: NN, caption?: NC, value?: TokenValueTypedFactory<V>) => Token<Strict<NN, N>, Strict<NC, C>, NV>;
 
 	optional: <
 		NC extends string = C,
@@ -83,9 +83,9 @@ export type CompositeToken<
 	V extends TokenValueCompositeFactory<any, any>,
 > = CompositeTokenFactory<N, C, V> & {
 	as: <
-		NN extends string,
+		NN extends string | null,
 		NC extends string | null,
-	>(name: NN, caption?: NC, value?: CompositeTokenParams<V>) => CompositeToken<NN, Strict<NC, C>, V>;
+	>(name: NN, caption?: NC, value?: CompositeTokenParams<V>) => CompositeToken<Strict<NN, N>, Strict<NC, C>, V>;
 
 	optional: <NC extends string = C>(caption?: string,) => CompositeToken<N, NC, V>;
 	name: () => N;
@@ -99,12 +99,14 @@ export type TokenAny = Token<any, any, any>;
 export type LikeToken = {name: () => string; value: () => any};
 
 export type TokenExtra<
+	N extends string,
 	C extends string,
 	V extends TokenValueFactory,
 > = {
+	name?: N;
+	value?: V;
 	optional?: boolean;
 	caption?: C;
-	value?: V;
 }
 
 

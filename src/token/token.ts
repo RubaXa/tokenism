@@ -52,22 +52,22 @@ export function createToken<
 	value: V,
 ): Token<N, C, V>;
 export function createToken(name: string, caption: string, value: any): Function {
-	const extra = Object(this) as TokenExtra<string, any>;
-	const getExtra = (other: TokenExtra<string, any> = {}) => ({
+	const extra = Object(this) as TokenExtra<string, string, any>;
+	const getExtra = (other: TokenExtra<string, string, any> = {}) => ({
 		caption,
 		value,
 		...extra,
 		...other,
 	});
 
-	function token(nextCaption?: string, nextValue?: any) {
-		return createToken.call(getExtra(), name, nextCaption, nextValue);
+	function token(newCaption?: string, newValue?: any) {
+		return createToken.call(getExtra(), name, newCaption, newValue);
 	}
 
 	let lastValue: TokenValueInfer<any>;
 
 	const optional = !!extra.optional;
-	const getName = () => name;
+	const getName = () => name || extra.name;
 	const getCaption = () => caption || extra.caption;
 	const getValue = (mode?: 'raw') => {
 		lastValue = compute(value as any, extra.value, mode);
@@ -75,11 +75,11 @@ export function createToken(name: string, caption: string, value: any): Function
 	};
 
 	return defineProperties(token, {
-		as: (name: string, nextCaption?: string, nextValue?: TokenValueFactory) => {
-			return createToken.call(getExtra({}), name, nextCaption, nextValue);
+		as: (newName: string, newCaption?: string, newValue?: TokenValueFactory) => {
+			return createToken.call(getExtra({name}), newName, newCaption, newValue);
 		},
-		optional: (nextCaption?: string, nextValue?: TokenValueFactory) => {
-			return createToken.call(getExtra({optional: true}), name, nextCaption, nextValue);
+		optional: (newCaption?: string, newValue?: TokenValueFactory) => {
+			return createToken.call(getExtra({optional: true}), name, newCaption, newValue);
 		},
 		name: getName,
 		caption: getCaption,
