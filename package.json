@@ -9,9 +9,9 @@
   "scripts": {
     "test": "jest",
     "ts-build": "tsc",
-    "git-clean": "git clean -f",
-    "prepublish": "npm run test && npm run ts-build",
-    "postpublish": "npm run git-clean"
+    "ts-build-clean": "rimraf ./*.{d.ts,js} && rimraf ./{src,__jest__}/**/*.{d.ts,js}",
+    "prepublishOnly": "npm run test && npm run ts-build",
+    "postpublish": "npm run ts-build-clean"
   },
   "files": [
     "*.js",
@@ -22,6 +22,7 @@
   "devDependencies": {
     "@types/jest": "^24.0.23",
     "jest": "^24.9.0",
+    "rimraf": "^3.0.0",
     "ts-jest": "^24.1.0",
     "typescript": "^3.7.2"
   },

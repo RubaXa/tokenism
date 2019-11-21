@@ -2,7 +2,7 @@
   "compilerOptions": {
     "module": "commonjs",
     "target": "es2020",
-    "isolatedModules": true,
+    "declaration": true,
     "moduleResolution": "node",
     "experimentalDecorators": true,
     "removeComments": false,

@@ -1,1 +1,2 @@
-export * from './src/token';
+export * from './src/token/token.types';
+export * from './src/token/token';

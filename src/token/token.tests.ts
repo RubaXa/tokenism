@@ -1,7 +1,8 @@
 import { createToken, composeTokens } from './token';
-import agToken from './lib/agToken';
 
+const agTokenGen = () => `AG_${Math.random().toString(16).split('.')[1]}`;
 const agTokenComment = 'Autogen-токен';
+const agToken = createToken('ag_topken', agTokenComment, agTokenGen);
 
 describe('tokens', () => {
 	it('typeof token', () => {
