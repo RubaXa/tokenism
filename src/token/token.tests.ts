@@ -1,8 +1,8 @@
 import { createToken, composeTokens } from './token';
 
 const agTokenGen = () => `AG_${Math.random().toString(16).split('.')[1]}`;
-const agTokenComment = 'Autogen-токен';
-const agToken = createToken('ag_topken', agTokenComment, agTokenGen);
+const agTokenCaption = 'Autogen-токен';
+const agToken = createToken('agToken', agTokenCaption, agTokenGen);
 
 describe('tokens', () => {
 	it('typeof token', () => {
@@ -20,9 +20,9 @@ describe('tokens', () => {
 			expect(agToken().param()).toBe('ag_token');
 		});
 
-		it('comment', () => {
-			expect(agToken.comment()).toBe(agTokenComment);
-			expect(agToken().comment()).toBe(agTokenComment);
+		it('caption', () => {
+			expect(agToken.caption()).toBe(agTokenCaption);
+			expect(agToken().caption()).toBe(agTokenCaption);
 		});
 
 		it('value', () => {
@@ -38,27 +38,27 @@ describe('tokens', () => {
 			const tok = agToken.as('token');
 
 			expect(tok.param()).toBe('token');
-			expect(tok.comment()).toBe(agTokenComment);
-			expect(tok.toJSON()).toEqual(raw('token', agTokenComment, 'String', tok.lastValue()));
+			expect(tok.caption()).toBe(agTokenCaption);
+			expect(tok.toJSON()).toEqual(raw('token', agTokenCaption, 'String', tok.lastValue()));
 		});
 
 		it('as "regToken"', () => {
 			const reg = agToken.as('regToken', 'Reg-токен');
 
 			expect(reg.param()).toBe('reg_token');
-			expect(reg.comment()).toBe('Reg-токен');
+			expect(reg.caption()).toBe('Reg-токен');
 			expect(reg.toJSON()).toEqual(raw('reg_token', 'Reg-токен', 'String', reg.lastValue()));
 		});
 
 		it('toJSON', () => {
-			expect(agToken.toJSON()).toEqual(raw('ag_token', agTokenComment, 'String', agToken.lastValue()));
+			expect(agToken.toJSON()).toEqual(raw('ag_token', agTokenCaption, 'String', agToken.lastValue()));
 		});
 	});
 
 	describe('optional', () => {
 		it('toJSON', () => {
 			const opt = agToken.optional();
-			expect(opt.toJSON()).toEqual(raw('ag_token', agTokenComment, 'String', opt.lastValue(), true));
+			expect(opt.toJSON()).toEqual(raw('ag_token', agTokenCaption, 'String', opt.lastValue(), true));
 		});
 	});
 
@@ -69,25 +69,25 @@ describe('tokens', () => {
 			expect(tok).not.toBe(agToken);
 		});
 
-		it('with comment', () => {
+		it('with caption', () => {
 			const sess = agToken('Сессия');
 
-			expect(sess.comment()).toBe('Сессия');
+			expect(sess.caption()).toBe('Сессия');
 			expect(sess.toJSON()).toEqual(raw('ag_token', 'Сессия', 'String', sess.lastValue()));
 		});
 
 		it('with value', () => {
 			const tok = agToken(null, 'tok');
 
-			expect(tok.comment()).toBe(agTokenComment);
+			expect(tok.caption()).toBe(agTokenCaption);
 			expect(tok.value()).toBe('tok');
-			expect(tok.toJSON()).toEqual(raw('ag_token', agTokenComment, 'String', 'tok'));
+			expect(tok.toJSON()).toEqual(raw('ag_token', agTokenCaption, 'String', 'tok'));
 		});
 
-		it('with comment & value', () => {
+		it('with caption & value', () => {
 			const reg = agToken('reg', 'tok');
 
-			expect(reg.comment()).toBe('reg');
+			expect(reg.caption()).toBe('reg');
 			expect(reg.value()).toBe('tok');
 			expect(reg.toJSON()).toEqual(raw('ag_token', 'reg', 'String', 'tok'));
 		});
@@ -168,9 +168,9 @@ describe('tokens', () => {
 			const genFalse = () => false;
 			const oauthFlag = createToken('oauth', 'OAuth', genFalse);
 			const hasPhoneFlag = createToken('has_phone', 'Has Phone', genFalse);
-			const flags = createToken('flags', 'Флаги', composeTokens((compose, params: {all?: boolean}) => compose(
-				oauthFlag,
-				hasPhoneFlag,
+			const flags = createToken('flags', 'Флаги', composeTokens((compose, {all}: {all?: boolean}) => compose(
+				oauthFlag(null, all),
+				hasPhoneFlag(null, all),
 			)));
 
 			it('defaults', () => {
@@ -190,9 +190,9 @@ describe('tokens', () => {
 	});
 });
 
-function raw(name: string, comment: string, type: string, value: any, optional: boolean = false) {
+function raw(name: string, caption: string, type: string, value: any, optional: boolean = false) {
 	return {
-		comment,
+		caption,
 		name,
 		optional,
 		type,

@@ -2,13 +2,12 @@ import {
 	LikeToken,
 	TokenValueCompositeFactory,
 	TokenValueFactory,
-	CastToTokenValueFactory,
 	Token,
 	TokenExtra,
 	TokenValueGen,
 	TokenValueInfer,
 	CompositeToken,
-	CompositeTokenParams,
+	TokenAny,
 } from './token.types';
 
 export function composeTokens<
@@ -19,13 +18,13 @@ export function composeTokens<
 		compose: <T extends LikeToken[]>(...t: T) => T,
 		params: P,
 	) => F,
-): TokenValueCompositeFactory<F>;
-export function composeTokens<T extends LikeToken[]>(...tokens: T): TokenValueCompositeFactory<T>;
+): TokenValueCompositeFactory<F, P>;
+export function composeTokens<T extends LikeToken[]>(...tokens: T): TokenValueCompositeFactory<T, null>;
 export function composeTokens(...args: any): Function {
-	if (typeof args[0] === 'function') {
+	if (!isLikeToken(args[0])) {
 		const factory = args[0];
 		const compose = (...tokens: any) => tokens;
-		return defineProperties((params: object = {}) => factory(compose, params), {
+		return defineProperties((params: object) => factory(compose, params), {
 			composite: 2,
 		});
 	} else {
@@ -38,10 +37,10 @@ export function composeTokens(...args: any): Function {
 export function createToken<
 	K extends string,
 	C extends string,
-	V extends TokenValueCompositeFactory<any>,
+	V extends TokenValueCompositeFactory<any, any>,
 >(
 	key: K,
-	comment: C,
+	caption: C,
 	value: V,
 ): CompositeToken<K, C, V>;
 export function createToken<
@@ -50,20 +49,20 @@ export function createToken<
 	V extends TokenValueFactory,
 >(
 	key: K,
-	comment: C,
+	caption: C,
 	value: V,
 ): Token<K, C, V>;
-export function createToken(key: string, comment: string, value: any): Function {
+export function createToken(key: string, caption: string, value: any): Function {
 	const extra = Object(this) as TokenExtra<string, any>;
 	const getExtra = (other: TokenExtra<string, any> = {}) => ({
-		comment,
+		caption,
 		value,
 		...extra,
 		...other,
 	});
 
-	function token(nextComment?: string, nextValue?: any) {
-		return createToken.call(getExtra(), key, nextComment, nextValue);
+	function token(nextCaption?: string, nextValue?: any) {
+		return createToken.call(getExtra(), key, nextCaption, nextValue);
 	}
 
 	let lastValue: TokenValueInfer<any>;
@@ -71,22 +70,22 @@ export function createToken(key: string, comment: string, value: any): Function 
 	const optional = !!extra.optional;
 	const getKey = () => key;
 	const getParam = () => snakeCase(extra.param || key);
-	const getComment = () => comment || extra.comment;
+	const getCaption = () => caption || extra.caption;
 	const getValue = (mode?: 'raw') => {
 		lastValue = compute(value as any, extra.value, mode);
 		return lastValue;
 	};
 
 	return defineProperties(token, {
-		as: (param: string, nextComment?: string, nextValue?: TokenValueFactory) => {
-			return createToken.call(getExtra({param}), key, nextComment, nextValue);
+		as: (param: string, nextCaption?: string, nextValue?: TokenValueFactory) => {
+			return createToken.call(getExtra({param}), key, nextCaption, nextValue);
 		},
-		optional: (nextComment?: string, nextValue?: TokenValueFactory) => {
-			return createToken.call(getExtra({optional: true}), key, nextComment, nextValue);
+		optional: (nextCaption?: string, nextValue?: TokenValueFactory) => {
+			return createToken.call(getExtra({optional: true}), key, nextCaption, nextValue);
 		},
 		key: getKey,
 		param: getParam,
-		comment: getComment,
+		caption: getCaption,
 		value: () => getValue(),
 		lastValue: () => lastValue,
 		toJSON: () => {
@@ -96,7 +95,7 @@ export function createToken(key: string, comment: string, value: any): Function 
 				name: getParam(),
 				value: val,
 				optional,
-				comment: getComment(),
+				caption: getCaption(),
 				type: typeOf(val),
 			};
 		},
@@ -128,8 +127,8 @@ function isTokenValueGen(val: unknown): val is TokenValueGen {
 }
 
 function compute<
-	V extends TokenValueFactory | TokenValueCompositeFactory<any>,
-	I extends TokenValueFactory | TokenValueCompositeFactory<any>,
+	V extends TokenValueFactory | TokenValueCompositeFactory<any, any>,
+	I extends TokenValueFactory | TokenValueCompositeFactory<any, any>,
 	R extends TokenValueInfer<any>, // todo: -any
 >(
 	value: V,
@@ -172,19 +171,25 @@ function compute<
 }
 
 function computeComposite(
-	factory: TokenValueCompositeFactory<any>,
+	factory: TokenValueCompositeFactory<any, any>,
 	params?: any,
 	mode?: 'raw',
 ): object {
-	const tokens = factory();
+	const useParams = factory.composite === 2;
+	const tokens = factory(useParams ? Object(params) : null);
 	const result = {};
 
 	for (let token of tokens) {
 		if (isToken(token)) {
 			const key = token.key();
-			const val = params && params[key] || null;
-			const t = val ? token(null, val) : token;
-			result[key] = mode === 'raw' ? t.toJSON() : t.value();
+
+			if (useParams) {
+				result[key] = mode === 'raw' ? token.toJSON() : token.value();
+			} else {
+				const val = params && params[key] || null;
+				const t = val ? token(null, val) : token;
+				result[key] = mode === 'raw' ? t.toJSON() : t.value();
+			}
 		}
 	}
 
@@ -204,7 +209,7 @@ function isToken(val: unknown): val is Token<any, any, any> {
 	return isLikeToken(val);
 }
 
-function isTokenValueCompositeFactory(val: unknown): val is TokenValueCompositeFactory<any> {
+function isTokenValueCompositeFactory(val: unknown): val is TokenValueCompositeFactory<any, any> {
 	if (typeof val === 'function') {
 		return !!val['composite'];
 	}
