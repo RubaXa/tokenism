@@ -7,7 +7,6 @@ import {
 	TokenValueGen,
 	TokenValueInfer,
 	CompositeToken,
-	TokenAny,
 } from './token.types';
 
 export function composeTokens<
@@ -35,24 +34,24 @@ export function composeTokens(...args: any): Function {
 }
 
 export function createToken<
-	K extends string,
+	N extends string,
 	C extends string,
 	V extends TokenValueCompositeFactory<any, any>,
 >(
-	key: K,
+	name: N,
 	caption: C,
 	value: V,
-): CompositeToken<K, C, V>;
+): CompositeToken<N, C, V>;
 export function createToken<
-	K extends string,
+	N extends string,
 	C extends string,
 	V extends TokenValueFactory,
 >(
-	key: K,
+	name: N,
 	caption: C,
 	value: V,
-): Token<K, C, V>;
-export function createToken(key: string, caption: string, value: any): Function {
+): Token<N, C, V>;
+export function createToken(name: string, caption: string, value: any): Function {
 	const extra = Object(this) as TokenExtra<string, any>;
 	const getExtra = (other: TokenExtra<string, any> = {}) => ({
 		caption,
@@ -62,13 +61,13 @@ export function createToken(key: string, caption: string, value: any): Function 
 	});
 
 	function token(nextCaption?: string, nextValue?: any) {
-		return createToken.call(getExtra(), key, nextCaption, nextValue);
+		return createToken.call(getExtra(), name, nextCaption, nextValue);
 	}
 
 	let lastValue: TokenValueInfer<any>;
 
 	const optional = !!extra.optional;
-	const getKey = () => key;
+	const getName = () => name;
 	const getCaption = () => caption || extra.caption;
 	const getValue = (mode?: 'raw') => {
 		lastValue = compute(value as any, extra.value, mode);
@@ -76,13 +75,13 @@ export function createToken(key: string, caption: string, value: any): Function 
 	};
 
 	return defineProperties(token, {
-		as: (key: string, nextCaption?: string, nextValue?: TokenValueFactory) => {
-			return createToken.call(getExtra({}), key, nextCaption, nextValue);
+		as: (name: string, nextCaption?: string, nextValue?: TokenValueFactory) => {
+			return createToken.call(getExtra({}), name, nextCaption, nextValue);
 		},
 		optional: (nextCaption?: string, nextValue?: TokenValueFactory) => {
-			return createToken.call(getExtra({optional: true}), key, nextCaption, nextValue);
+			return createToken.call(getExtra({optional: true}), name, nextCaption, nextValue);
 		},
-		key: getKey,
+		name: getName,
 		caption: getCaption,
 		value: () => getValue(),
 		lastValue: () => lastValue,
@@ -90,7 +89,7 @@ export function createToken(key: string, caption: string, value: any): Function 
 			let val = getValue('raw');
 
 			return {
-				name: getKey(),
+				name: getName(),
 				value: val,
 				optional,
 				caption: getCaption(),
@@ -101,11 +100,11 @@ export function createToken(key: string, caption: string, value: any): Function 
 }
 
 function defineProperties<T extends object, P extends object>(obj: T, props: P): T & P {
-	const map = Object.keys(props).reduce((descr, key) => {
-		descr[key] = {
+	const map = Object.keys(props).reduce((descr, propName) => {
+		descr[propName] = {
 			writable: false,
 			configurable: false,
-			value: props[key],
+			value: props[propName],
 		};
 
 		return descr;
@@ -175,14 +174,14 @@ function computeComposite(
 
 	for (let token of tokens) {
 		if (isToken(token)) {
-			const key = token.key();
+			const name = token.name();
 
 			if (useParams) {
-				result[key] = mode === 'raw' ? token.toJSON() : token.value();
+				result[name] = mode === 'raw' ? token.toJSON() : token.value();
 			} else {
-				const val = params && params[key] || null;
+				const val = params && params[name] || null;
 				const t = val ? token(null, val) : token;
-				result[key] = mode === 'raw' ? t.toJSON() : t.value();
+				result[name] = mode === 'raw' ? t.toJSON() : t.value();
 			}
 		}
 	}

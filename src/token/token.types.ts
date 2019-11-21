@@ -26,11 +26,11 @@ type TokenValueTypedFactory<
 > = T | ((...args: any[]) => T);
 
 type TokenJSON<
-	K extends string,
+	N extends string,
 	C extends string,
 	V extends TokenValueFactory,
 > = {
-	key: K;
+	name: N;
 	optional: boolean;
 	caption: C;
 	value: TokenValueInfer<V>;
@@ -47,26 +47,26 @@ type TokenFactory<
 >(caption?: NC, value?: NV) => Token<K, Strict<NC, C>, Strict<NV, V>>;
 
 export type Token<
-	K extends string,
+	N extends string,
 	C extends string,
 	V extends TokenValueFactory,
-> = TokenFactory<K, C, V> & {
+> = TokenFactory<N, C, V> & {
 	as: <
-		NK extends string,
+		NN extends string,
 		NC extends string = C,
 		NV extends TokenValueFactory = V,
-	>(key: NK, caption?: string, value?: TokenValueTypedFactory<V>) => Token<NK, NC, NV>;
+	>(name: NN, caption?: string, value?: TokenValueTypedFactory<V>) => Token<NN, NC, NV>;
 
 	optional: <
 		NC extends string = C,
 		NV extends TokenValueFactory = V,
-	>(caption?: string, value?: TokenValueTypedFactory<V>) => Token<K, NC, NV>;
+	>(caption?: string, value?: TokenValueTypedFactory<V>) => Token<N, NC, NV>;
 
-	key: () => K;
+	name: () => N;
 	caption: () => C;
 	value: () => TokenValueInfer<V>;
 	lastValue: () => TokenValueInfer<V>;
-	toJSON: () => TokenJSON<K, C, V>;
+	toJSON: () => TokenJSON<N, C, V>;
 };
 
 type CompositeTokenFactory<
@@ -78,17 +78,17 @@ type CompositeTokenFactory<
 >(caption?: NC, value?: CompositeTokenParams<V>) => CompositeToken<K, Strict<NC, C>, V>;
 
 export type CompositeToken<
-	K extends string,
+	N extends string,
 	C extends string,
 	V extends TokenValueCompositeFactory<any, any>,
-> = CompositeTokenFactory<K, C, V> & {
+> = CompositeTokenFactory<N, C, V> & {
 	as: <
-		NK extends string,
+		NN extends string,
 		NC extends string | null,
-	>(key: NK, caption?: NC, value?: CompositeTokenParams<V>) => CompositeToken<NK, Strict<NC, C>, V>;
+	>(name: NN, caption?: NC, value?: CompositeTokenParams<V>) => CompositeToken<NN, Strict<NC, C>, V>;
 
-	optional: <NC extends string = C>(caption?: string,) => CompositeToken<K, NC, V>;
-	key: () => K;
+	optional: <NC extends string = C>(caption?: string,) => CompositeToken<N, NC, V>;
+	name: () => N;
 	caption: () => C;
 	value: () => V;
 	lastValue: () => V;
@@ -96,15 +96,13 @@ export type CompositeToken<
 };
 
 export type TokenAny = Token<any, any, any>;
-export type LikeToken = {key: () => string; value: () => any};
+export type LikeToken = {name: () => string; value: () => any};
 
 export type TokenExtra<
 	C extends string,
 	V extends TokenValueFactory,
 > = {
-	composite?: boolean;
 	optional?: boolean;
-	param?: string;
 	caption?: C;
 	value?: V;
 }
@@ -126,8 +124,8 @@ export type TokenCompositeValue<T extends LikeToken[]> = (
 	FlattenObject<
 		ToIntersect<
 			{[K in keyof T]:
-				T[K] extends {key: () => infer KK, value: () => infer VV}
-					? { [P in Cast<KK, string>]: CompositeTokenParam<VV> }
+				T[K] extends {name: () => infer NN, value: () => infer VV}
+					? { [P in Cast<NN, string>]: CompositeTokenParam<VV> }
 					: never
 			}[number]
 		>

@@ -11,8 +11,8 @@ describe('tokens', () => {
 
 	describe('default (required)', () => {
 		it('key', () => {
-			expect(agToken.key()).toBe('agToken');
-			expect(agToken().key()).toBe('agToken');
+			expect(agToken.name()).toBe('agToken');
+			expect(agToken().name()).toBe('agToken');
 		});
 
 		it('caption', () => {
