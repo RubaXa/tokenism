@@ -10,7 +10,7 @@ type TokenValue =
 export type TokenValueGen = (...args: any[]) => TokenValue;
 export type TokenValueCompositeFactory<
 	T extends LikeToken[]
-> = (() => T) & {composite: boolean};
+> = (() => T) & {composite: number};
 
 export type TokenValueFactory =
 	| TokenValue
@@ -34,19 +34,6 @@ type TokenJSON<
 	optional: boolean;
 	comment: C;
 	value: TokenValueInfer<V>;
-	type: string;
-}
-
-type CompositeTokenJSON<
-	K extends string,
-	C extends string,
-	V extends TokenValueCompositeFactory<any>,
-> = {
-	key: K;
-	param: string;
-	optional: boolean;
-	comment: C;
-	value: object; // путь пока так, а то я тут до конца жизни буду дженерики описывать
 	type: string;
 }
 
@@ -136,9 +123,11 @@ type CompositeTokenParam<F> = F extends TokenValueCompositeFactory<infer T>
 	: F
 ;
 
-export type CompositeTokenParams<F> = Cast<
-	CompositeTokenParam<F>,
-	object
+export type CompositeTokenParams<F> = DeepPartial<
+	Cast<
+		CompositeTokenParam<F>,
+		object
+	>
 >;
 
 export type TokenCompositeValue<T extends LikeToken[]> = (
@@ -170,3 +159,4 @@ type FlattenObject<T> = (
 type IsNullable<T> = ToIntersect<T> extends (undefined | null) ? true : false;
 type Cast<A, E> = A extends E ? A : E;
 type Strict<A, E> = NonNullable<IsNullable<A> extends true ? E : A>;
+type DeepPartial<T> = T extends object ? { [K in keyof T]?: DeepPartial<T[K]> } : T;

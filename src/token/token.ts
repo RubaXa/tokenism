@@ -11,10 +11,28 @@ import {
 	CompositeTokenParams,
 } from './token.types';
 
-export function composeTokens<T extends LikeToken[]>(...tokens: T): TokenValueCompositeFactory<T> {
-	return defineProperties(() => tokens, {
-		composite: true,
-	});
+export function composeTokens<
+	F extends LikeToken[],
+	P extends object,
+>(
+	factory: (
+		compose: <T extends LikeToken[]>(...t: T) => T,
+		params: P,
+	) => F,
+): TokenValueCompositeFactory<F>;
+export function composeTokens<T extends LikeToken[]>(...tokens: T): TokenValueCompositeFactory<T>;
+export function composeTokens(...args: any): Function {
+	if (typeof args[0] === 'function') {
+		const factory = args[0];
+		const compose = (...tokens: any) => tokens;
+		return defineProperties((params: object = {}) => factory(compose, params), {
+			composite: 2,
+		});
+	} else {
+		return defineProperties(() => args, {
+			composite: 1,
+		});
+	}
 }
 
 export function createToken<
@@ -119,11 +137,11 @@ function compute<
 	mode?: 'raw',
 ): R {
 	if (isTokenValueCompositeFactory(value)) {
-		return computeComposite(value, mode) as any; // todo: -any
+		return computeComposite(value, null, mode) as any; // todo: -any
 	}
 
 	if (isTokenValueCompositeFactory(initial)) {
-		return 'todo' as any as R; // todo
+		return computeComposite(initial, value, mode) as any; // todo: -any
 	}
 
 	const valueFactory = value as TokenValueFactory;
@@ -153,13 +171,20 @@ function compute<
 	return val;
 }
 
-function computeComposite(factory: TokenValueCompositeFactory<any>, mode?: 'raw') {
+function computeComposite(
+	factory: TokenValueCompositeFactory<any>,
+	params?: any,
+	mode?: 'raw',
+): object {
 	const tokens = factory();
 	const result = {};
 
 	for (let token of tokens) {
 		if (isToken(token)) {
-			result[token.param()] = mode === 'raw' ? token.toJSON() : token.value();
+			const key = token.key();
+			const val = params && params[key] || null;
+			const t = val ? token(null, val) : token;
+			result[key] = mode === 'raw' ? t.toJSON() : t.value();
 		}
 	}
 

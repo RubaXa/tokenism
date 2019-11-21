@@ -1,7 +1,7 @@
 {
-  "name": "@mail/apidoc-next",
+  "name": "tokenism",
   "version": "0.1.0",
-  "description": "apidoc // next",
+  "description": "A very strange tool for describing tokens, how to use it's only to you!",
   "author": "RubaXa <ibn@rubaxa.org>",
   "license": "MIT",
   "repository": "",

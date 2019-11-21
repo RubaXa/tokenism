@@ -101,14 +101,16 @@ describe('tokens', () => {
 
 	describe('composite', () => {
 		const msgId = () => '43503050430523';
+		const unreadFlag = () => false;
+		const pinnedFlag = () => true;
 		const message = createToken(
 			'message',
 			'Письмо',
 			composeTokens(
 				createToken('id', 'ID Письма', msgId),
 				createToken('flags', 'Флаги Письма', composeTokens(
-					createToken('unread', 'Прочитанность', false),
-					createToken('pinned', 'Прикреплённость', true),
+					createToken('unread', 'Прочитанность', unreadFlag),
+					createToken('pinned', 'Прикреплённость', pinnedFlag),
 				)),
 			),
 		);
@@ -134,32 +136,56 @@ describe('tokens', () => {
 			}));
 		});
 
-		// it('with values', () => {
-		// 	expect(message(null, {}).value()).toEqual({
-		// 		id: '---',
-		// 		flags: {
-		// 			unread: true,
-		// 			pinned: true,
-		// 		},
-		// 	});
-		// });
+		it('with values', () => {
+			expect(message(null, {id: 'FAKE', flags: {unread: true}}).value()).toEqual({
+				id: 'FAKE',
+				flags: {
+					unread: true,
+					pinned: true,
+				},
+			});
+		});
 
-		// describe('nested', () => {
-		// 	const threadId = () => '0:1234:5';
-		// 	const thread = createToken('thread', 'Тред', composeTokens(
-		// 		createToken('id', 'ID Треда', threadId),
-		// 		createToken('messages', 'Список писем', [
-		// 			message,
-		// 		]),
-		// 	));
+		describe('nested', () => {
+			const threadId = () => '0:1234:5';
+			const thread = createToken('thread', 'Тред', composeTokens(
+				createToken('id', 'ID Треда', threadId),
+				createToken('messages', 'Список писем', [
+					message,
+				]),
+			));
 
-		// 	it('value', () => {
-		// 		expect(thread.value()).toEqual({
-		// 			id: threadId(),
-		// 			messages: [{id: msgId(), flags: {unread: false, pinned: true}}],
-		// 		});
-		// 	});
-		// });
+			it('value', () => {
+				expect(thread.value()).toEqual({
+					id: threadId(),
+					messages: [{id: msgId(), flags: {unread: false, pinned: true}}],
+				});
+			});
+		});
+
+		describe('configurable', () => {
+			const genFalse = () => false;
+			const oauthFlag = createToken('oauth', 'OAuth', genFalse);
+			const hasPhoneFlag = createToken('has_phone', 'Has Phone', genFalse);
+			const flags = createToken('flags', 'Флаги', composeTokens((compose, params: {all?: boolean}) => compose(
+				oauthFlag,
+				hasPhoneFlag,
+			)));
+
+			it('defaults', () => {
+				expect(flags.value()).toEqual({
+					oauth: false,
+					has_phone: false,
+				});
+			});
+
+			it('with params', () => {
+				expect(flags(null, {all: true}).value()).toEqual({
+					oauth: true,
+					has_phone: true,
+				});
+			});
+		});
 	});
 });
 
