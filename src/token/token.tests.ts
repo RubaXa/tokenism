@@ -15,11 +15,6 @@ describe('tokens', () => {
 			expect(agToken().key()).toBe('agToken');
 		});
 
-		it('param', () => {
-			expect(agToken.param()).toBe('ag_token');
-			expect(agToken().param()).toBe('ag_token');
-		});
-
 		it('caption', () => {
 			expect(agToken.caption()).toBe(agTokenCaption);
 			expect(agToken().caption()).toBe(agTokenCaption);
@@ -30,14 +25,9 @@ describe('tokens', () => {
 			expect(agToken().value().split('_')[0]).toBe('AG');
 		});
 
-	// 	it('isOptional()', () => {
-	// 		expect(token.isOptional()).toBe(false);
-	// 	});
-
 		it('as "token"', () => {
 			const tok = agToken.as('token');
 
-			expect(tok.param()).toBe('token');
 			expect(tok.caption()).toBe(agTokenCaption);
 			expect(tok.toJSON()).toEqual(raw('token', agTokenCaption, 'String', tok.lastValue()));
 		});
@@ -45,20 +35,19 @@ describe('tokens', () => {
 		it('as "regToken"', () => {
 			const reg = agToken.as('regToken', 'Reg-токен');
 
-			expect(reg.param()).toBe('reg_token');
 			expect(reg.caption()).toBe('Reg-токен');
-			expect(reg.toJSON()).toEqual(raw('reg_token', 'Reg-токен', 'String', reg.lastValue()));
+			expect(reg.toJSON()).toEqual(raw('regToken', 'Reg-токен', 'String', reg.lastValue()));
 		});
 
 		it('toJSON', () => {
-			expect(agToken.toJSON()).toEqual(raw('ag_token', agTokenCaption, 'String', agToken.lastValue()));
+			expect(agToken.toJSON()).toEqual(raw('agToken', agTokenCaption, 'String', agToken.lastValue()));
 		});
 	});
 
 	describe('optional', () => {
 		it('toJSON', () => {
 			const opt = agToken.optional();
-			expect(opt.toJSON()).toEqual(raw('ag_token', agTokenCaption, 'String', opt.lastValue(), true));
+			expect(opt.toJSON()).toEqual(raw('agToken', agTokenCaption, 'String', opt.lastValue(), true));
 		});
 	});
 
@@ -73,7 +62,7 @@ describe('tokens', () => {
 			const sess = agToken('Сессия');
 
 			expect(sess.caption()).toBe('Сессия');
-			expect(sess.toJSON()).toEqual(raw('ag_token', 'Сессия', 'String', sess.lastValue()));
+			expect(sess.toJSON()).toEqual(raw('agToken', 'Сессия', 'String', sess.lastValue()));
 		});
 
 		it('with value', () => {
@@ -81,7 +70,7 @@ describe('tokens', () => {
 
 			expect(tok.caption()).toBe(agTokenCaption);
 			expect(tok.value()).toBe('tok');
-			expect(tok.toJSON()).toEqual(raw('ag_token', agTokenCaption, 'String', 'tok'));
+			expect(tok.toJSON()).toEqual(raw('agToken', agTokenCaption, 'String', 'tok'));
 		});
 
 		it('with caption & value', () => {
@@ -89,7 +78,7 @@ describe('tokens', () => {
 
 			expect(reg.caption()).toBe('reg');
 			expect(reg.value()).toBe('tok');
-			expect(reg.toJSON()).toEqual(raw('ag_token', 'reg', 'String', 'tok'));
+			expect(reg.toJSON()).toEqual(raw('agToken', 'reg', 'String', 'tok'));
 		});
 	});
 

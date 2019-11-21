@@ -69,7 +69,6 @@ export function createToken(key: string, caption: string, value: any): Function 
 
 	const optional = !!extra.optional;
 	const getKey = () => key;
-	const getParam = () => snakeCase(extra.param || key);
 	const getCaption = () => caption || extra.caption;
 	const getValue = (mode?: 'raw') => {
 		lastValue = compute(value as any, extra.value, mode);
@@ -77,14 +76,13 @@ export function createToken(key: string, caption: string, value: any): Function 
 	};
 
 	return defineProperties(token, {
-		as: (param: string, nextCaption?: string, nextValue?: TokenValueFactory) => {
-			return createToken.call(getExtra({param}), key, nextCaption, nextValue);
+		as: (key: string, nextCaption?: string, nextValue?: TokenValueFactory) => {
+			return createToken.call(getExtra({}), key, nextCaption, nextValue);
 		},
 		optional: (nextCaption?: string, nextValue?: TokenValueFactory) => {
 			return createToken.call(getExtra({optional: true}), key, nextCaption, nextValue);
 		},
 		key: getKey,
-		param: getParam,
 		caption: getCaption,
 		value: () => getValue(),
 		lastValue: () => lastValue,
@@ -92,7 +90,7 @@ export function createToken(key: string, caption: string, value: any): Function 
 			let val = getValue('raw');
 
 			return {
-				name: getParam(),
+				name: getKey(),
 				value: val,
 				optional,
 				caption: getCaption(),
@@ -116,10 +114,6 @@ function defineProperties<T extends object, P extends object>(obj: T, props: P):
 	Object.defineProperties(obj, map);
 
 	return obj as T & P;
-}
-
-function snakeCase(key: string) {
-	return key.replace(/[A-Z]/g, (chr) => `_${chr.toLowerCase()}`);
 }
 
 function isTokenValueGen(val: unknown): val is TokenValueGen {

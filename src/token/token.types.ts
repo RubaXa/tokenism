@@ -31,7 +31,6 @@ type TokenJSON<
 	V extends TokenValueFactory,
 > = {
 	key: K;
-	param: string;
 	optional: boolean;
 	caption: C;
 	value: TokenValueInfer<V>;
@@ -53,10 +52,10 @@ export type Token<
 	V extends TokenValueFactory,
 > = TokenFactory<K, C, V> & {
 	as: <
-		P extends string,
+		NK extends string,
 		NC extends string = C,
 		NV extends TokenValueFactory = V,
-	>(param: P, caption?: string, value?: TokenValueTypedFactory<V>) => Token<P, NC, NV>;
+	>(key: NK, caption?: string, value?: TokenValueTypedFactory<V>) => Token<NK, NC, NV>;
 
 	optional: <
 		NC extends string = C,
@@ -67,7 +66,6 @@ export type Token<
 	caption: () => C;
 	value: () => TokenValueInfer<V>;
 	lastValue: () => TokenValueInfer<V>;
-	param: () => string;
 	toJSON: () => TokenJSON<K, C, V>;
 };
 
@@ -85,15 +83,15 @@ export type CompositeToken<
 	V extends TokenValueCompositeFactory<any, any>,
 > = CompositeTokenFactory<K, C, V> & {
 	as: <
-		P extends string,
+		NK extends string,
 		NC extends string | null,
-	>(param: P, caption?: NC, value?: CompositeTokenParams<V>) => CompositeToken<P, Strict<NC, C>, V>;
+	>(key: NK, caption?: NC, value?: CompositeTokenParams<V>) => CompositeToken<NK, Strict<NC, C>, V>;
+
 	optional: <NC extends string = C>(caption?: string,) => CompositeToken<K, NC, V>;
 	key: () => K;
 	caption: () => C;
 	value: () => V;
 	lastValue: () => V;
-	param: () => string;
 	toJSON: () => object;
 };
 
