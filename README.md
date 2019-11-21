@@ -63,8 +63,11 @@ flags.toJSON();
 // {
 //    name: "flags",
 //    caption: "Flags object",
-//    value: "0.68209487562",
 //    optional: false,
+//    value: {
+//	     unread: {name: "unread", ...},
+//	     pinned: {name: "pinned", ...},
+//    },
 // }
 ```
 
